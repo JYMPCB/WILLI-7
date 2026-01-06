@@ -136,6 +136,7 @@ void ui_event_btnServicePostergar(lv_event_t * e)
 
     if(event_code == LV_EVENT_CLICKED) {
         service_postergar(e);
+        _ui_flag_modify(ui_pnlServiceOdo, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
     }
 }
 
@@ -145,6 +146,7 @@ void ui_event_btnServiceAceptar(lv_event_t * e)
 
     if(event_code == LV_EVENT_CLICKED) {
         service_aceptar(e);
+        _ui_flag_modify(ui_pnlServiceOdo, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
     }
 }
 
@@ -788,6 +790,8 @@ void ui_HOME_screen_init(void)
     lv_obj_set_style_shadow_opa(ui_btnServicePostergar, 100, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui_btnServicePostergar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_spread(ui_btnServicePostergar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_btnServicePostergar, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(ui_btnServicePostergar, 255, LV_PART_MAIN | LV_STATE_PRESSED);
 
     ui_lblPostergar = lv_label_create(ui_pnlServiceOdo);
     lv_obj_set_width(ui_lblPostergar, LV_SIZE_CONTENT);   /// 1
@@ -814,6 +818,8 @@ void ui_HOME_screen_init(void)
     lv_obj_set_style_shadow_opa(ui_btnServiceAceptar, 100, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui_btnServiceAceptar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_spread(ui_btnServiceAceptar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_btnServiceAceptar, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(ui_btnServiceAceptar, 255, LV_PART_MAIN | LV_STATE_PRESSED);
 
     ui_lblAceptar = lv_label_create(ui_pnlServiceOdo);
     lv_obj_set_width(ui_lblAceptar, LV_SIZE_CONTENT);   /// 1
@@ -851,6 +857,7 @@ void ui_HOME_screen_init(void)
     lv_obj_set_height(ui_dotOta, 61);
     lv_obj_set_x(ui_dotOta, -1);
     lv_obj_set_y(ui_dotOta, 42);
+    lv_obj_add_flag(ui_dotOta, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_set_style_bg_color(ui_dotOta, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_dotOta, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_img_src(ui_dotOta, &ui_img_icn_update_png, LV_PART_MAIN | LV_STATE_DEFAULT);
