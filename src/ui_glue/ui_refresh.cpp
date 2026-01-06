@@ -221,21 +221,67 @@ void ui_refresh_cb(lv_timer_t *t)
   strlcpy(ssid_l, cfg_ssid, sizeof(ssid_l));
 
   /* --- OTA --- */
+  static bool last_ota_active = false;
+  static int  last_ota_prog   = -1;
+  static char last_ota_status[64] = "";
+  static char last_ota_pct[8] = "";
 
-  // 1) Overlay visible solo durante OTA
-  if (ui_otaOverlay) {
+  // 0) Mostrar/ocultar overlay SOLO si cambia el estado
+  if (ui_otaOverlay && (g_ota_active != last_ota_active)) {
     if (g_ota_active) lv_obj_clear_flag(ui_otaOverlay, LV_OBJ_FLAG_HIDDEN);
     else              lv_obj_add_flag(ui_otaOverlay, LV_OBJ_FLAG_HIDDEN);
+    last_ota_active = g_ota_active;
+
+    // al entrar en OTA, forzá un refresh de cachés OTA
+    last_ota_prog = -1;
+    last_ota_status[0] = '\0';
+    last_ota_pct[0] = '\0';
   }
 
-  // 2) Progreso
-  if (ui_barOta) lv_bar_set_value(ui_barOta, g_ota_progress, LV_ANIM_OFF);
+  // 1) (Opcional) suavizado para que no “salte”
+  //    - el real es g_ota_progress
+  //    - el que se muestra es disp_prog
+  static int disp_prog = 0;
+  int target = g_ota_progress;
+  if (target < 0) target = 0;
+  if (target > 100) target = 100;
 
-  // 3) Status
-  if (ui_lblOtaStatus) lv_label_set_text(ui_lblOtaStatus, g_ota_status);
-  // Durante OTA, NO refrescar nada más (evita glitches/carga)
+  if (!g_ota_active) disp_prog = 0;          // al salir de OTA, reset
+  else {
+    // sube de a 1-2% por tick para que sea suave
+    if (disp_prog < target) disp_prog += 2;
+    if (disp_prog > target) disp_prog = target;
+  }
+
+  // 2) Progreso (solo si cambia)
+  if (g_ota_active && ui_barOta && (disp_prog != last_ota_prog)) {
+    lv_bar_set_value(ui_barOta, disp_prog, LV_ANIM_OFF);
+    last_ota_prog = disp_prog;
+  }
+
+  // 3) Status (solo si cambia)
+  if (g_ota_active && ui_lblOtaStatus) {
+    // g_ota_status debería ser null-terminated
+    if (strncmp(last_ota_status, g_ota_status, sizeof(last_ota_status)) != 0) {
+      strlcpy(last_ota_status, g_ota_status, sizeof(last_ota_status));
+      lv_label_set_text(ui_lblOtaStatus, last_ota_status);
+    }
+  }
+
+  // 4) Porcentaje (solo si cambia)
+  if (g_ota_active && ui_lblOtaPct) {
+    char pct[8];
+    snprintf(pct, sizeof(pct), "%d%%", disp_prog);
+
+    if (strcmp(last_ota_pct, pct) != 0) {
+      strlcpy(last_ota_pct, pct, sizeof(last_ota_pct));
+      lv_label_set_text(ui_lblOtaPct, last_ota_pct);
+    }
+  }
+
+  // Durante OTA, NO refrescar nada más
   if (g_ota_active) return;
-  
+
   if(first_refresh) {
     first_refresh = false;
 

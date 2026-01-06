@@ -26,7 +26,7 @@ lv_obj_t * ui_Keyboard1 = NULL;
 lv_obj_t * ui_otaOverlay = NULL;
 lv_obj_t * ui_lblOtaStatus = NULL;
 lv_obj_t * ui_barOta = NULL;
-lv_obj_t * ui_Label1 = NULL;
+lv_obj_t * ui_lblOtaPct = NULL;
 // event funtions
 void ui_event_CONFIG(lv_event_t * e)
 {
@@ -333,14 +333,14 @@ void ui_CONFIG_screen_init(void)
     lv_obj_set_style_bg_color(ui_barOta, lv_color_hex(0xFFFFFF), LV_PART_INDICATOR | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_barOta, 255, LV_PART_INDICATOR | LV_STATE_DEFAULT);
 
-    ui_Label1 = lv_label_create(ui_otaOverlay);
-    lv_obj_set_width(ui_Label1, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label1, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_align(ui_Label1, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_Label1, "%");
-    lv_obj_set_style_text_color(ui_Label1, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_Label1, &ui_font_Big_2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    ui_lblOtaPct = lv_label_create(ui_otaOverlay);
+    lv_obj_set_width(ui_lblOtaPct, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_lblOtaPct, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_lblOtaPct, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_lblOtaPct, "");
+    lv_obj_set_style_text_color(ui_lblOtaPct, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_lblOtaPct, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblOtaPct, &ui_font_Big_2, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_add_event_cb(ui_btnConfig2, ui_event_btnConfig2, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_passArea, ui_event_passArea, LV_EVENT_ALL, NULL);
@@ -379,6 +379,6 @@ void ui_CONFIG_screen_destroy(void)
     ui_otaOverlay = NULL;
     ui_lblOtaStatus = NULL;
     ui_barOta = NULL;
-    ui_Label1 = NULL;
+    ui_lblOtaPct = NULL;
 
 }

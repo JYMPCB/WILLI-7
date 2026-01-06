@@ -41,7 +41,7 @@ extern lv_obj_t * ui_Keyboard1;
 extern lv_obj_t * ui_otaOverlay;
 extern lv_obj_t * ui_lblOtaStatus;
 extern lv_obj_t * ui_barOta;
-extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_lblOtaPct;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
