@@ -55,8 +55,6 @@ static void wifi_sync_globals_from_status()
     strlcpy(cfg_ssid, WiFi.SSID().c_str(), sizeof(cfg_ssid));
     strlcpy(cfg_ip,   WiFi.localIP().toString().c_str(), sizeof(cfg_ip));
     start_sntp_if_needed();
-    //busca actualizaciones OTA
-    ota_check_async();
   } else {
     wifi_ok = false;
     strlcpy(cfg_ssid, "SIN RED", sizeof(cfg_ssid));
@@ -147,6 +145,7 @@ void wifi_mgr_on_exit_config()
 
 void wifi_mgr_loop()
 {
+  static bool s_ota_checked_this_boot = false;
   // ✅ mantener globals coherentes siempre
   wifi_sync_globals_from_status();  
 
@@ -155,6 +154,12 @@ void wifi_mgr_loop()
   // detectar transición (conecta/reconecta)
   if (st == WL_CONNECTED && s_last_st != WL_CONNECTED) {
     rest_api_start();   // ✅ solo una vez al conectar/reconectar
+    
+    // Chequear OTA una vez por boot (o por reconexión)
+    if (!s_ota_checked_this_boot && !g_ota_active) {
+      s_ota_checked_this_boot = true;
+      ota_check_async();
+    }    
   }
 
   // detectar desconexión

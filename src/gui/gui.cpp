@@ -7,7 +7,6 @@
 #include "../gfx/LGFX_ESP32S3_RGB_MakerfabsParallelTFTwithTouch70.h"
 #include "esp_heap_caps.h" //GPT
 #include "../rgb/rgb_gpio.h"
-#include "ota_state.h"
 
 static const char* TAG = "gui";
 
@@ -28,25 +27,6 @@ static bool g_bl_was_on = true;
 /* Display flushing */
 void my_disp_flush( lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p )
 {
-
-  if(g_ota_active){
-    /*tatic bool once = false;
-    if (!once) {
-      g_prev_brightness = 255;   // valor típico
-      gfx.setBrightness(0);      // BL OFF
-      once = true;
-    }*/
-    lv_disp_flush_ready(disp);
-    return;
-  }
-
-  // --- OTA TERMINÓ: restaurar BL una sola vez ---
-  /*static bool was_ota = false;
-  if (!was_ota && g_prev_brightness != 0) {
-    gfx.setBrightness(g_prev_brightness);
-  }
-  was_ota = false;*/
-
   // ---------------- NORMAL ----------------
   const int32_t w = area->x2 - area->x1 + 1;
   const int32_t h = area->y2 - area->y1 + 1;
