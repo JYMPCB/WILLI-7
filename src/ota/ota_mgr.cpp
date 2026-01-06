@@ -182,7 +182,7 @@ static void ota_start_task(void* pv) {
     return;
   }
 
-  set_status("Flasheando...");
+  set_status("Cargando...");
 
   // Escribe por stream (no ocupa RAM)
   size_t written = Update.writeStream(*stream);

@@ -81,7 +81,6 @@ void ui_event_btnOtaUpdate(lv_event_t * e)
     if(event_code == LV_EVENT_CLICKED) {
         event_btn_start_ota(e);
         _ui_flag_modify(ui_otaOverlay, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_REMOVE);
-        _ui_flag_modify(ui_btnOtaUpdate, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
         _ui_flag_modify(ui_lblOtaNotes, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
         _ui_state_modify(ui_btnWifi, LV_STATE_DISABLED, _UI_MODIFY_STATE_ADD);
         _ui_state_modify(ui_btnConfig2, LV_STATE_DISABLED, _UI_MODIFY_STATE_ADD);
@@ -298,15 +297,15 @@ void ui_CONFIG_screen_init(void)
     lv_obj_set_style_bg_opa(ui_btnOtaCheck, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_otaOverlay = lv_obj_create(ui_CONFIG);
-    lv_obj_set_width(ui_otaOverlay, lv_pct(75));
-    lv_obj_set_height(ui_otaOverlay, lv_pct(25));
-    lv_obj_set_align(ui_otaOverlay, LV_ALIGN_BOTTOM_MID);
+    lv_obj_set_width(ui_otaOverlay, lv_pct(100));
+    lv_obj_set_height(ui_otaOverlay, lv_pct(100));
+    lv_obj_set_align(ui_otaOverlay, LV_ALIGN_CENTER);
     lv_obj_set_flex_flow(ui_otaOverlay, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(ui_otaOverlay, LV_FLEX_ALIGN_SPACE_AROUND, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_add_flag(ui_otaOverlay, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_otaOverlay, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
-    lv_obj_set_style_bg_color(ui_otaOverlay, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(ui_otaOverlay, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_otaOverlay, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_otaOverlay, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_lblOtaStatus = lv_label_create(ui_otaOverlay);
     lv_obj_set_width(ui_lblOtaStatus, LV_SIZE_CONTENT);   /// 1
@@ -316,13 +315,13 @@ void ui_CONFIG_screen_init(void)
     lv_obj_set_align(ui_lblOtaStatus, LV_ALIGN_TOP_MID);
     lv_obj_set_style_text_color(ui_lblOtaStatus, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblOtaStatus, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_lblOtaStatus, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblOtaStatus, &ui_font_Big, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_barOta = lv_bar_create(ui_otaOverlay);
     lv_bar_set_value(ui_barOta, 25, LV_ANIM_OFF);
     lv_bar_set_start_value(ui_barOta, 0, LV_ANIM_OFF);
     lv_obj_set_width(ui_barOta, lv_pct(75));
-    lv_obj_set_height(ui_barOta, lv_pct(25));
+    lv_obj_set_height(ui_barOta, lv_pct(10));
     lv_obj_set_align(ui_barOta, LV_ALIGN_CENTER);
     lv_obj_set_style_radius(ui_barOta, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(ui_barOta, lv_color_hex(0x949494), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -341,7 +340,7 @@ void ui_CONFIG_screen_init(void)
     lv_label_set_text(ui_Label1, "%");
     lv_obj_set_style_text_color(ui_Label1, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_Label1, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label1, &ui_font_Big_2, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_add_event_cb(ui_btnConfig2, ui_event_btnConfig2, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_passArea, ui_event_passArea, LV_EVENT_ALL, NULL);
