@@ -309,6 +309,39 @@ void ui_refresh_cb(lv_timer_t *t)
     service_popup_hide(); // LVGL acá OK
   }
 
+    // HOME: puntito si hay update
+  if (ui_dotOta) {
+    lv_obj_add_flag(ui_dotOta, g_ota_available ? LV_OBJ_FLAG_HIDDEN : 0); // si usás flags al revés ajustalo
+    if (g_ota_available) lv_obj_clear_flag(ui_dotOta, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(ui_dotOta, LV_OBJ_FLAG_HIDDEN);
+  }
+
+  // Config: status + notas + progreso
+  if (ui_lblOtaStatus) lv_label_set_text(ui_lblOtaStatus, g_ota_status);
+
+  if (ui_lblOtaNotes) {
+    if (g_ota_available) lv_label_set_text(ui_lblOtaNotes, g_ota_notes);
+    else lv_label_set_text(ui_lblOtaNotes, "");
+  }
+
+  if (ui_barOta) {
+    if (g_ota_active) {
+      lv_obj_clear_flag(ui_barOta, LV_OBJ_FLAG_HIDDEN);
+      lv_bar_set_value(ui_barOta, g_ota_progress, LV_ANIM_OFF);
+    } else {
+      // opcional: ocultar o dejar en 0
+      // lv_obj_add_flag(ui_barOta, LV_OBJ_FLAG_HIDDEN);
+      lv_bar_set_value(ui_barOta, 0, LV_ANIM_OFF);
+    }
+  }
+
+  // Botón update habilitado solo si hay update y no está en progreso
+  if (ui_btnOtaUpdate) {
+    if (g_ota_available && !g_ota_active) lv_obj_clear_state(ui_btnOtaUpdate, LV_STATE_DISABLED);
+    else lv_obj_add_state(ui_btnOtaUpdate, LV_STATE_DISABLED);
+  }
+
+
   // --- WIFI: scan al entrar ---
   if(req & UI_REQ_WIFI_SCAN) {
     cfg_need_scan = true;

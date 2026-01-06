@@ -5,7 +5,7 @@
 #include "../ui/ui.h"
 #include "../training/training_interval.h"
 #include "../app/app_globals.h"
-
+#include "../ota/ota_mgr.h"
 #include <time.h>
 
 #ifndef beep
@@ -28,6 +28,20 @@ void service_postergar(lv_event_t * e)
 
 // Helper: pedir refresh de UI (LVGL se toca en ui_refresh)
 static inline void ui_req(uint32_t f) { g_ui_req_flags |= f; }
+
+void event_btn_check_ota(lv_event_t* e) {
+  (void)e;
+  ota_check_async();
+}
+
+void event_btn_start_ota(lv_event_t* e) {
+  (void)e;
+
+  // Recomendación: si hay entrenamiento activo, pedir confirmación o bloquear
+  // if(sessionActive) { ... modal "detener entrenamiento para actualizar" ... return; }
+
+  ota_start_async();
+}
 
 // ----------------------------------------------------------
 // ------------------------ WIFI ----------------------------

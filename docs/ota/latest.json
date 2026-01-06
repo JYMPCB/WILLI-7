@@ -1,0 +1,6 @@
+{
+  "version": "1.0.0",
+  "build": 20260106,
+  "bin_url": "https://JYMPCB.github.io/willi/ota/firmware.bin",
+  "notes": "Primera OTA por GitHub Pages"
+}
