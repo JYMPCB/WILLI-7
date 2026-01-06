@@ -3,7 +3,7 @@
 
 // URL del manifest en GitHub Pages
 #ifndef OTA_MANIFEST_URL
-#define OTA_MANIFEST_URL "https://TU_USUARIO.github.io/TU_REPO/ota/latest.json"
+#define OTA_MANIFEST_URL "https://jympcb.github.io/WILLI-7/ota/latest.json"
 #endif
 
 // Llamalo al conectar WiFi y/o cada X minutos

@@ -18,6 +18,8 @@ void service_aceptar(lv_event_t * e);
 void config_loaded(lv_event_t * e);
 void change_to_home(lv_event_t * e);
 void wifi_btn_toggle(lv_event_t * e);
+void event_btn_start_ota(lv_event_t * e);
+void event_btn_check_ota(lv_event_t * e);
 void btnSetPointSeriesMinus(lv_event_t * e);
 void btnSetPointSeriesPlus(lv_event_t * e);
 void btnSetPointMacroPause(lv_event_t * e);

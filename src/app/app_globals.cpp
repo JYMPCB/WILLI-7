@@ -4,7 +4,7 @@
 
 
 // --- Firmware version ---
-const char* g_fw_version = "1.0.1";
+const char* g_fw_version = "1.0.2";
 const uint32_t g_fw_build = 20260106;
 // --- OTA state ---
 volatile bool g_ota_available = false;

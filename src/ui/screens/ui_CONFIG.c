@@ -72,6 +72,24 @@ void ui_event_Keyboard1(lv_event_t * e)
     }
 }
 
+void ui_event_btnOtaUpdate(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) {
+        event_btn_start_ota(e);
+    }
+}
+
+void ui_event_btnOtaCheck(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) {
+        event_btn_check_ota(e);
+    }
+}
+
 // build funtions
 
 void ui_CONFIG_screen_init(void)
@@ -283,6 +301,8 @@ void ui_CONFIG_screen_init(void)
     lv_obj_add_event_cb(ui_btnWifi, ui_event_btnWifi, LV_EVENT_ALL, NULL);
     lv_keyboard_set_textarea(ui_Keyboard1, ui_passArea);
     lv_obj_add_event_cb(ui_Keyboard1, ui_event_Keyboard1, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_btnOtaUpdate, ui_event_btnOtaUpdate, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_btnOtaCheck, ui_event_btnOtaCheck, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_CONFIG, ui_event_CONFIG, LV_EVENT_ALL, NULL);
 
 }
