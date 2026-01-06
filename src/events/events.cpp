@@ -9,7 +9,7 @@
 #include <time.h>
 
 #ifndef beep
-#define beep 19
+#define beep 17
 #endif
 
 static inline void ui_req(uint32_t f);
