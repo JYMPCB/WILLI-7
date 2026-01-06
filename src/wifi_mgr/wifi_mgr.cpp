@@ -154,7 +154,7 @@ void wifi_mgr_loop()
   // detectar transición (conecta/reconecta)
   if (st == WL_CONNECTED && s_last_st != WL_CONNECTED) {
     rest_api_start();   // ✅ solo una vez al conectar/reconectar
-    
+
     // Chequear OTA una vez por boot (o por reconexión)
     if (!s_ota_checked_this_boot && !g_ota_active) {
       s_ota_checked_this_boot = true;
@@ -317,7 +317,7 @@ void wifi_mgr_loop()
   }
 
   // ------------------- OTA (SOLO EN CONFIG) -------------------
-  if(WiFi.status() == WL_CONNECTED) {
+  if(WiFi.status() == WL_CONNECTED && !g_ota_active) {
     if(!cfg_server_on) {
       initwebserver();
       cfg_server_on = true;

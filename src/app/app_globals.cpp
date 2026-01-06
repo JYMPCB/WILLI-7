@@ -15,6 +15,7 @@ const uint32_t g_fw_build = (uint32_t)FW_BUILD;
 volatile bool g_ota_available = false;
 //volatile bool g_ota_active = false;
 volatile int  g_ota_progress = 0;
+volatile bool g_ota_check_running = false;
 
 char g_ota_latest_ver[16] = {0};
 char g_ota_bin_url[256]   = {0};

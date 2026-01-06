@@ -77,6 +77,7 @@ extern lv_obj_t * ui_btnServiceAceptar;
 extern lv_obj_t * ui_lblAceptar;
 extern lv_obj_t * ui_Label3;
 extern lv_obj_t * ui_lblOdoMaquina2;
+extern void ui_event_dotOta(lv_event_t * e);
 extern lv_obj_t * ui_dotOta;
 // CUSTOM VARIABLES
 extern lv_obj_t * uic_rgbRing;

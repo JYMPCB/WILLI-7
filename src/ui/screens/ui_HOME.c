@@ -72,7 +72,7 @@ void ui_event_btnConfig(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
 
     if(event_code == LV_EVENT_CLICKED) {
-        _ui_screen_change(&ui_CONFIG, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_CONFIG_screen_init);
+        _ui_screen_change(&ui_CONFIG, LV_SCR_LOAD_ANIM_FADE_ON, 500, 0, &ui_CONFIG_screen_init);
     }
 }
 
@@ -145,6 +145,15 @@ void ui_event_btnServiceAceptar(lv_event_t * e)
 
     if(event_code == LV_EVENT_CLICKED) {
         service_aceptar(e);
+    }
+}
+
+void ui_event_dotOta(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) {
+        _ui_screen_change(&ui_CONFIG, LV_SCR_LOAD_ANIM_FADE_ON, 500, 0, &ui_CONFIG_screen_init);
     }
 }
 
@@ -837,15 +846,14 @@ void ui_HOME_screen_init(void)
     lv_obj_set_style_text_opa(ui_lblOdoMaquina2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblOdoMaquina2, &ui_font_Medium_26, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_dotOta = lv_img_create(ui_HOME);
-    lv_img_set_src(ui_dotOta, &ui_img_icn_update_png);
-    lv_obj_set_width(ui_dotOta, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_dotOta, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_dotOta, -365);
-    lv_obj_set_y(ui_dotOta, -151);
-    lv_obj_set_align(ui_dotOta, LV_ALIGN_CENTER);
-    lv_obj_add_flag(ui_dotOta, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_clear_flag(ui_dotOta, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    ui_dotOta = lv_btn_create(ui_HOME);
+    lv_obj_set_width(ui_dotOta, 72);
+    lv_obj_set_height(ui_dotOta, 61);
+    lv_obj_set_x(ui_dotOta, -1);
+    lv_obj_set_y(ui_dotOta, 42);
+    lv_obj_set_style_bg_color(ui_dotOta, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_dotOta, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_src(ui_dotOta, &ui_img_icn_update_png, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_add_event_cb(ui_btnConfig, ui_event_btnConfig, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_btnReinicio, ui_event_btnReinicio, LV_EVENT_ALL, NULL);
@@ -853,6 +861,7 @@ void ui_HOME_screen_init(void)
     lv_obj_add_event_cb(ui_btnInter, ui_event_btnInter, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_btnServicePostergar, ui_event_btnServicePostergar, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_btnServiceAceptar, ui_event_btnServiceAceptar, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_dotOta, ui_event_dotOta, LV_EVENT_ALL, NULL);
     uic_rgbRing = ui_rgbRing;
     uic_groupPausa = ui_groupPausa;
 

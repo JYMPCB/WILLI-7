@@ -36,10 +36,6 @@ void event_btn_check_ota(lv_event_t* e) {
 
 void event_btn_start_ota(lv_event_t* e) {
   (void)e;
-
-  // Recomendación: si hay entrenamiento activo, pedir confirmación o bloquear
-  // if(sessionActive) { ... modal "detener entrenamiento para actualizar" ... return; }
-
   ota_start_async();
 }
 

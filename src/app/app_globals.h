@@ -18,6 +18,7 @@ extern const uint32_t g_fw_build;    // 20260106 or epoch
 extern volatile bool g_ota_available;
 extern volatile bool g_ota_active;
 extern volatile int  g_ota_progress;     // 0..100
+extern volatile bool g_ota_check_running;
 
 extern char g_ota_latest_ver[16];
 extern char g_ota_bin_url[256];

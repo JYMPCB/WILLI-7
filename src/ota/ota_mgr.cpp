@@ -36,6 +36,9 @@ void ota_request_cancel() {
 static void ota_check_task(void* pv) {
   (void)pv;
 
+  if (g_ota_check_running) { vTaskDelete(NULL); return; }
+  g_ota_check_running = true;
+
   if (WiFi.status() != WL_CONNECTED) {
     set_status("Sin WiFi");
     vTaskDelete(NULL);

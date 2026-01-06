@@ -38,6 +38,10 @@ extern void ui_event_btnOtaUpdate(lv_event_t * e);
 extern lv_obj_t * ui_btnOtaUpdate;
 extern void ui_event_btnOtaCheck(lv_event_t * e);
 extern lv_obj_t * ui_btnOtaCheck;
+extern lv_obj_t * ui_otaOverlay;
+extern lv_obj_t * ui_lblOtaStatus;
+extern lv_obj_t * ui_barOta;
+extern lv_obj_t * ui_Label1;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus
