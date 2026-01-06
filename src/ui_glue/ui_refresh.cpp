@@ -243,6 +243,18 @@ void ui_refresh_cb(lv_timer_t *t)
   
   /* --- OTA --- */
 
+  // 1) Overlay visible solo durante OTA
+  if (ui_otaOverlay) {
+    if (g_ota_active) lv_obj_clear_flag(ui_otaOverlay, LV_OBJ_FLAG_HIDDEN);
+    else              lv_obj_add_flag(ui_otaOverlay, LV_OBJ_FLAG_HIDDEN);
+  }
+
+  // 2) Progreso
+  if (ui_barOta) lv_bar_set_value(ui_barOta, g_ota_progress, LV_ANIM_OFF);
+
+  // 3) Status
+  if (ui_lblOtaStatus) lv_label_set_text(ui_lblOtaStatus, g_ota_status);
+
   // HOME: indicador de update
   if (ui_dotOta) {
       if (g_ota_available)

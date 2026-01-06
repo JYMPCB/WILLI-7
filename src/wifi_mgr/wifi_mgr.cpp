@@ -5,6 +5,7 @@
 #include "wifi_mgr.h"
 #include "dataWilli.h"
 #include "rest_api/rest_api.h"
+#include "../ota/ota_mgr.h"
 
 //rest api
 //static bool s_rest_up = false;     // para disparar 1 sola vez por conexión
@@ -54,6 +55,8 @@ static void wifi_sync_globals_from_status()
     strlcpy(cfg_ssid, WiFi.SSID().c_str(), sizeof(cfg_ssid));
     strlcpy(cfg_ip,   WiFi.localIP().toString().c_str(), sizeof(cfg_ip));
     start_sntp_if_needed();
+    //busca actualizaciones OTA
+    ota_check_async();
   } else {
     wifi_ok = false;
     strlcpy(cfg_ssid, "SIN RED", sizeof(cfg_ssid));

@@ -16,6 +16,10 @@ extern void ui_INICIO_screen_destroy(void);
 extern void ui_event_INICIO(lv_event_t * e);
 extern lv_obj_t * ui_INICIO;
 extern lv_obj_t * ui_Image1;
+extern lv_obj_t * ui_otaOverlay;
+extern lv_obj_t * ui_lblOtaStatus;
+extern lv_obj_t * ui_barOta;
+extern lv_obj_t * ui_Label1;
 // CUSTOM VARIABLES
 
 #ifdef __cplusplus

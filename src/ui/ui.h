@@ -44,6 +44,7 @@ LV_IMG_DECLARE(ui_img_icn_update_png);    // assets/icn_update.png
 LV_IMG_DECLARE(ui_img_icn_x2_png);    // assets/icn_x2.png
 LV_IMG_DECLARE(ui_img_txt_conectar_png);    // assets/txt_conectar.png
 LV_IMG_DECLARE(ui_img_txt_desconectar_png);    // assets/txt_desconectar.png
+LV_IMG_DECLARE(ui_img_icn_actualizar_png);    // assets/icn_actualizar.png
 LV_IMG_DECLARE(ui_img_icn_series_png);    // assets/icn_series.png
 LV_IMG_DECLARE(ui_img_icn_minus_png);    // assets/icn_minus.png
 LV_IMG_DECLARE(ui_img_icn_plus_png);    // assets/icn_plus.png

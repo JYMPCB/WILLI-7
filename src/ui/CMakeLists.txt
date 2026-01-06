@@ -18,6 +18,7 @@ SET(SOURCES screens/ui_INICIO.c
     images/ui_img_icn_x2_png.c
     images/ui_img_txt_conectar_png.c
     images/ui_img_txt_desconectar_png.c
+    images/ui_img_icn_actualizar_png.c
     images/ui_img_icn_series_png.c
     images/ui_img_icn_minus_png.c
     images/ui_img_icn_plus_png.c

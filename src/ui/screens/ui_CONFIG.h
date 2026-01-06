@@ -33,8 +33,6 @@ extern lv_obj_t * ui_lblInfo;
 extern void ui_event_Keyboard1(lv_event_t * e);
 extern lv_obj_t * ui_Keyboard1;
 extern lv_obj_t * ui_lblNetName;
-extern lv_obj_t * ui_barOta;
-extern lv_obj_t * ui_lblOtaStatus;
 extern lv_obj_t * ui_lblOtaNotes;
 extern void ui_event_btnOtaUpdate(lv_event_t * e);
 extern lv_obj_t * ui_btnOtaUpdate;

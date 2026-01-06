@@ -20,8 +20,6 @@ lv_obj_t * ui_btnWifi = NULL;
 lv_obj_t * ui_lblInfo = NULL;
 lv_obj_t * ui_Keyboard1 = NULL;
 lv_obj_t * ui_lblNetName = NULL;
-lv_obj_t * ui_barOta = NULL;
-lv_obj_t * ui_lblOtaStatus = NULL;
 lv_obj_t * ui_lblOtaNotes = NULL;
 lv_obj_t * ui_btnOtaUpdate = NULL;
 lv_obj_t * ui_btnOtaCheck = NULL;
@@ -78,6 +76,7 @@ void ui_event_btnOtaUpdate(lv_event_t * e)
 
     if(event_code == LV_EVENT_CLICKED) {
         event_btn_start_ota(e);
+        _ui_screen_change(&ui_INICIO, LV_SCR_LOAD_ANIM_FADE_ON, 500, 0, &ui_INICIO_screen_init);
     }
 }
 
@@ -102,9 +101,7 @@ void ui_CONFIG_screen_init(void)
     ui_Panel7 = lv_obj_create(ui_CONFIG);
     lv_obj_set_width(ui_Panel7, 382);
     lv_obj_set_height(ui_Panel7, 306);
-    lv_obj_set_x(ui_Panel7, -9);
-    lv_obj_set_y(ui_Panel7, -82);
-    lv_obj_set_align(ui_Panel7, LV_ALIGN_CENTER);
+    lv_obj_set_align(ui_Panel7, LV_ALIGN_TOP_MID);
     lv_obj_set_flex_flow(ui_Panel7, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(ui_Panel7, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_clear_flag(ui_Panel7, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -142,7 +139,7 @@ void ui_CONFIG_screen_init(void)
     ui_lblNetTittle = lv_label_create(ui_CONFIG);
     lv_obj_set_width(ui_lblNetTittle, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_lblNetTittle, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_lblNetTittle, -163);
+    lv_obj_set_x(ui_lblNetTittle, -157);
     lv_obj_set_y(ui_lblNetTittle, lv_pct(-35));
     lv_obj_set_align(ui_lblNetTittle, LV_ALIGN_CENTER);
     lv_label_set_text(ui_lblNetTittle, "RED\n\n\n\n\nCLAVE");
@@ -237,12 +234,13 @@ void ui_CONFIG_screen_init(void)
     lv_obj_set_width(ui_lblInfo, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_lblInfo, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_lblInfo, lv_pct(0));
-    lv_obj_set_y(ui_lblInfo, lv_pct(-15));
+    lv_obj_set_y(ui_lblInfo, lv_pct(-13));
     lv_obj_set_align(ui_lblInfo, LV_ALIGN_CENTER);
     lv_label_set_long_mode(ui_lblInfo, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(ui_lblInfo, "");
     lv_obj_set_style_text_color(ui_lblInfo, lv_color_hex(0x00FF21), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_lblInfo, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblInfo, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_Keyboard1 = lv_keyboard_create(ui_CONFIG);
     lv_obj_set_width(ui_Keyboard1, lv_pct(100));
@@ -259,42 +257,37 @@ void ui_CONFIG_screen_init(void)
     lv_label_set_text(ui_lblNetName, "NOMBRE DE RED ");
     lv_obj_set_style_text_font(ui_lblNetName, &ui_font_Small, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_barOta = lv_bar_create(ui_CONFIG);
-    lv_bar_set_value(ui_barOta, 25, LV_ANIM_OFF);
-    lv_bar_set_start_value(ui_barOta, 0, LV_ANIM_OFF);
-    lv_obj_set_width(ui_barOta, 150);
-    lv_obj_set_height(ui_barOta, 10);
-    lv_obj_set_x(ui_barOta, 71);
-    lv_obj_set_y(ui_barOta, 199);
-    lv_obj_set_align(ui_barOta, LV_ALIGN_CENTER);
-
-    ui_lblOtaStatus = lv_label_create(ui_CONFIG);
-    lv_obj_set_width(ui_lblOtaStatus, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_lblOtaStatus, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_lblOtaStatus, 11);
-    lv_obj_set_y(ui_lblOtaStatus, 166);
-    lv_obj_set_align(ui_lblOtaStatus, LV_ALIGN_CENTER);
-
     ui_lblOtaNotes = lv_label_create(ui_CONFIG);
     lv_obj_set_width(ui_lblOtaNotes, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_lblOtaNotes, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_lblOtaNotes, 11);
-    lv_obj_set_y(ui_lblOtaNotes, 119);
+    lv_obj_set_x(ui_lblOtaNotes, -8);
+    lv_obj_set_y(ui_lblOtaNotes, 113);
     lv_obj_set_align(ui_lblOtaNotes, LV_ALIGN_CENTER);
+    lv_obj_set_style_text_color(ui_lblOtaNotes, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_lblOtaNotes, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_lblOtaNotes, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_btnOtaUpdate = lv_btn_create(ui_CONFIG);
-    lv_obj_set_width(ui_btnOtaUpdate, 100);
-    lv_obj_set_height(ui_btnOtaUpdate, 50);
-    lv_obj_set_x(ui_btnOtaUpdate, 271);
-    lv_obj_set_y(ui_btnOtaUpdate, 130);
+    lv_obj_set_width(ui_btnOtaUpdate, 225);
+    lv_obj_set_height(ui_btnOtaUpdate, 77);
+    lv_obj_set_x(ui_btnOtaUpdate, 0);
+    lv_obj_set_y(ui_btnOtaUpdate, 194);
     lv_obj_set_align(ui_btnOtaUpdate, LV_ALIGN_CENTER);
+    lv_obj_set_style_radius(ui_btnOtaUpdate, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_btnOtaUpdate, lv_color_hex(0x42926A), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_btnOtaUpdate, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_src(ui_btnOtaUpdate, &ui_img_icn_actualizar_png, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_recolor(ui_btnOtaUpdate, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_img_recolor_opa(ui_btnOtaUpdate, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_btnOtaCheck = lv_btn_create(ui_CONFIG);
-    lv_obj_set_width(ui_btnOtaCheck, 100);
-    lv_obj_set_height(ui_btnOtaCheck, 50);
-    lv_obj_set_x(ui_btnOtaCheck, 271);
-    lv_obj_set_y(ui_btnOtaCheck, 13);
+    lv_obj_set_width(ui_btnOtaCheck, 119);
+    lv_obj_set_height(ui_btnOtaCheck, 102);
+    lv_obj_set_x(ui_btnOtaCheck, -334);
+    lv_obj_set_y(ui_btnOtaCheck, -183);
     lv_obj_set_align(ui_btnOtaCheck, LV_ALIGN_CENTER);
+    lv_obj_set_style_bg_color(ui_btnOtaCheck, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_btnOtaCheck, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_add_event_cb(ui_btnConfig2, ui_event_btnConfig2, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_passArea, ui_event_passArea, LV_EVENT_ALL, NULL);
@@ -327,8 +320,6 @@ void ui_CONFIG_screen_destroy(void)
     ui_lblInfo = NULL;
     ui_Keyboard1 = NULL;
     ui_lblNetName = NULL;
-    ui_barOta = NULL;
-    ui_lblOtaStatus = NULL;
     ui_lblOtaNotes = NULL;
     ui_btnOtaUpdate = NULL;
     ui_btnOtaCheck = NULL;

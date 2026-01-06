@@ -8,6 +8,7 @@
 #include "rgb/rgb_mgr.h"
 #include "../rgb/rgb_gpio.h"
 #include "service/service_mgr.h"
+
 //#include "beep/beep_mgr.h"
 #define ESP70C
 #ifdef ESP70C
@@ -76,4 +77,6 @@ void app_init()
 
     //inicia service
     g_service.begin();
+
+    
 }
