@@ -1,4 +1,5 @@
 #include <Arduino.h>
+
 #define ESP70C 
 #ifdef ESP70C
 #include <lv_conf.h>
@@ -10,20 +11,29 @@
 #include <esp32_smartdisplay.h>
 #include <ui/ui.h>
 #endif
+
+#include "app/app.h"
+#include "ui_state.h"
+#include "sensor/hall_sensor.h"
+#include "app/app_globals.h"   
+#include "wifi_mgr/wifi_mgr.h"
+//#include "beep/beep_mgr.h"
+
 #include <WiFi.h>
-#include <Ticker.h>
-//#include "Audio.h"
-//#include "FS.h"
-#include "dataWilli.h"       //datos OTA
+#include "dataWilli.h"      
+#include "esp_cpu.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 
+//NVS para almacenar datos no volatiles
+#include <Preferences.h>
+Preferences prefs;
 
-//DEFINICION DE HARDWARE
+//DEFINICION DE HARDWARE                                                               
 #ifdef ESP70C
 #define beep  17
 #define sensorHall 18
-#define redOut   11
-#define greenOut 12
-#define blueOut  13
 //I2S sonido
 /*#define I2S_DOUT  17
 #define I2S_BCLK  0
@@ -34,847 +44,86 @@
 #define beep 26
 #endif
 
-//SERVIDOR DE FECHA Y HORA
-#define NTP_SERVER     "pool.ntp.org"
-#define UTC_OFFSET     -3*3600
-#define UTC_OFFSET_DST 0
+volatile uint32_t g_gui_worstGap_ms = 0;
+volatile uint32_t g_gui_last_lv_us  = 0;
+volatile uint32_t g_gui_stack_hw    = 0;
 
-//CONSTANTES MATEMATICAS
-//espacio circular = 2*pi*radio
-#define tita  6.28   // 2*PI (hay un solo sensor)
-#define radio 128  // 128mm
-float drdisco = tita * radio * 0.001;  //distancia radial del disco
-
-//VARIABLES INTERRUPCION EXTERNA
-volatile long giro=0;
-volatile size_t flagSensor=0;
-size_t counterFlags=0;
-volatile unsigned long tflag1;
-volatile unsigned long tflag2;
-volatile float tflags;
-//variables para antirebote ISR sensor hall INTERRUPCION EXTERNA
-volatile unsigned long startTime = 0;
-const size_t timeThreshold = 10;
-unsigned long giro_old=0;
-size_t habSensor=0;
-
-//fucking GLOABLES
-size_t tiempoHour=0, tiempoMin=0, tiempoSec=0;
-float espacio=0;
-size_t pausaMacro=0, pausaMicro=0;
-size_t fin = 0;
-size_t numSeriesMath, numPasadasMath;
-bool habLocalTime = 0;
-float velocidad_old;//global para backup
-
-//PROTOTIPOS
-//void audioTask(void *pvParameters);
-bool mySmartWifiConfig();
-bool autoConfig();
-void initwebserver();         //OTA
-void printLocalTime(); 
-void handle_server();
-void endwebserver();
-#ifdef ESP70C
-void smartdisplay_led_set_rgb( size_t redColour, size_t greenColour, size_t blueColour);
-#endif
-
-//OBJETOS 
-Ticker tempo1;  //objeto temporizador de 1seg para calculo fisico
-Ticker tempo2;  //objeto temporizador lv handler()
-Ticker tempo3;  //objeto temporizador de 1min para fecha y hora de internet
-Ticker tempo4;  //objeto temporizador reset de sensor de velocidad
-
-//Audio audio;
-
-//WiFiMulti wifiMulti;
-
-void lv_handler(){
-  lv_timer_handler();
-}
-
-void sensor()
-{  
-  if( ( millis() - startTime ) > timeThreshold ){
-    switch( flagSensor ) //solo para calcular velocidad instantanea
-    {
-      case 0: tflag1 = millis(); flagSensor++; break;
-      case 1: tflag2 = millis(); flagSensor++; break;//tiempo entre flags obetnido de 1 ciclo del sensor hall, resultado en segundos ;
-      case 2: break;
-      default: break;
-    }  
-    giro++;
-    startTime = millis();
-  }
-
-}
-
-#ifdef ESP70C
-void smartdisplay_led_set_rgb( size_t redColour, size_t greenColour, size_t blueColour){
-  
-  if( redColour == 0x01 ) digitalWrite( redOut, 0);
-  else digitalWrite( redOut, 1);
-  if( greenColour == 0x01 ) digitalWrite( greenOut, 0);
-  else digitalWrite( greenOut, 1);
-  if( blueColour == 0x01 ) digitalWrite( blueOut, 0);
-  else digitalWrite( blueOut, 1);
-  
-}
-#endif
-
-/*void tono( size_t tono ){    
-     size_t vol = 21;
-
-      audio.setVolume( vol );
-
-      File file;    
-          
-      switch( tono ){
-        case 1: file = SPIFFS.open("/1.mp3t");
-                if(!file){
-                  Serial.println("Failed to open file for reading");
-                  break;
-                }
-                audio.connecttoFS( SPIFFS, "1.mp3");
-                break;
-        case 2: file = SPIFFS.open("/2.mp3t");
-                if(!file){
-                  Serial.println("Failed to open file for reading");
-                  break;
-                }
-                audio.connecttoFS( SPIFFS, "2.mp3");
-                break;
-        case 3: file = SPIFFS.open("/3.mp3t");
-                if(!file){
-                  Serial.println("Failed to open file for reading");
-                  break;
-                }
-                audio.connecttoFS( SPIFFS, "3.mp3");
-                break;
-        case 4: file = SPIFFS.open("/4.mp3t");
-                if(!file){
-                  Serial.println("Failed to open file for reading");
-                  break;
-                }
-                audio.connecttoFS( SPIFFS, "4.mp3");
-                break;
-        case 5: file = SPIFFS.open("/5.mp3t");
-                if(!file){
-                  Serial.println("Failed to open file for reading");
-                  break;
-                }
-                audio.connecttoFS( SPIFFS, "5.mp3");
-                break;                                
-        default:    break;
-      } 
-      while( file.available() ){
-        audio.loop();
-        lv_handler();
-      }
-      //file.close();
-}*/
-
-
-bool habConfig = 0, habSearchNets = 0;
-void config_loaded ( lv_event_t * e){ 
-  habConfig = 1;  
-  habSearchNets = 1; 
-}
-
-void change_to_home ( lv_event_t * e){  
-  tone( beep, 800, 250 );
-  habConfig = 0;  
-}
-
-bool habInter = 0;  //LIBRE
-
-void btnProgramaOn ( lv_event_t * e){ 
-  tone(beep, 1500, 200 );
-  tone(beep, 1200, 100 ); 
-  habInter = 1;     
-}
-
-void btnLibreOn ( lv_event_t * e){ 
-  tone(beep, 1200, 200 );
-  tone(beep, 1500, 100 );  
-  habInter = 0;   
-  espacio = 0;
-  lv_label_set_text( ui_lblDistanceNumber, "0" ); 
-  tiempoHour = tiempoMin = tiempoSec = 0;
-  lv_obj_set_style_text_color(ui_lblTimeNumber, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_label_set_text( ui_lblTimeNumber, "00:00:00" );   
-  lv_label_set_text(ui_lblSpeedNumber, "0"); 
-  lv_img_set_angle(ui_imgCursorSpeed, 0);
-  lv_label_set_text(ui_LabelVarRitm, "00'00\"");   
-
-}
-
-void btnProgramOk ( lv_event_t * e){ 
-  tone( beep, 1500, 100 );
-  tone( beep, 1500, 100 );
-
-  char text[40];
-  bool sw = lv_obj_has_state( ui_swTipoPasada, LV_STATE_CHECKED );
-
-  lv_roller_get_selected_str( ui_rollerNumSeries, text, sizeof(text) );
-  lv_label_set_text( ui_lblNumSeries, text );
-  numSeriesMath = atoi( text );        
-    lv_roller_get_selected_str( ui_rollerNumPasadas, text, sizeof(text) );
-    lv_label_set_text( ui_lblNumPasadas, text );
-    numPasadasMath = atoi( text );           
-      if( sw == 1 ){   //sw = pasada por distancia
-        lv_roller_get_selected_str( ui_rollerPasadaDistancia, text, sizeof(text) );
-        lv_label_set_text( ui_lblDistanceNumber, text ); 
-        espacio = atof( text );
-        tiempoHour = tiempoMin = tiempoSec = 0;
-        lv_label_set_text( ui_lblTimeNumber, "00:00:00" );  
-       
-      }
-      if( sw == 0 ){   //sw = pasada por tiempo
-        espacio = 0;
-        lv_label_set_text( ui_lblDistanceNumber, "0" );
-        lv_roller_get_selected_str( ui_rollerPasadaTiempoMin, text, sizeof(text) );
-        tiempoMin = atoi( text );
-        lv_roller_get_selected_str( ui_rollerPasadaTiempoSeg, text, sizeof(text) ); 
-        tiempoSec = atoi( text );   
-        snprintf(text, sizeof(text), "%02i:%02i", tiempoMin, tiempoSec);
-        lv_label_set_text( ui_lblTimeNumber, text );  
-      }
-      lv_label_set_text(ui_lblSpeedNumber, "0"); 
-      lv_img_set_angle(ui_imgCursorSpeed, 0);
-      lv_label_set_text(ui_LabelVarRitm, "00'00\""); 
-}
-
-
-void reinit_ent ( lv_event_t * e){
-  char text[40];
-
-  tempo1.detach();                          //DETIENE LA LLAMADA A CALCULO MATH
-  habLocalTime = 1;     //HABILITA HORA Y FECHA INTERNET
-  tone( beep, 1200, 100 );
-
-  fin = 2;                                //HABILITA LA HABILITACION DEL SENSOR EN LOOP
-  //REINICIA VARIABLES DEL SENSOR
-  counterFlags = 0;
-  giro = giro_old = 0;
-  habSensor = 0;
-  flagSensor = 0;
-
-  //REINICIA VARIABLES FISICAS
-  tiempoHour = tiempoMin = tiempoSec = 0; 
-  espacio=0;
-
-  if( habInter == 0 ){    //reinicia entrenamiento libre
-    espacio = 0;
-    lv_label_set_text( ui_lblDistanceNumber, "0" ); 
-    tiempoHour = tiempoMin = tiempoSec = 0;
-    lv_obj_set_style_text_color(ui_lblTimeNumber, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_label_set_text( ui_lblTimeNumber, "00:00:00" );   
-    lv_label_set_text(ui_lblSpeedNumber, "0"); 
-    lv_label_set_text(ui_LabelVarRitm, "00'00\""); 
-  }
-  else{     //reinicia entrenamiento programado
-    bool sw = lv_obj_has_state( ui_swTipoPasada, LV_STATE_CHECKED );
-    
-    lv_roller_get_selected_str( ui_rollerNumSeries, text, sizeof(text) );
-    lv_label_set_text( ui_lblNumSeries, text );
-    numSeriesMath = atoi( text );         
-    lv_roller_get_selected_str( ui_rollerNumPasadas, text, sizeof(text) );
-    lv_label_set_text( ui_lblNumPasadas, text );
-    numPasadasMath = atoi( text );    
-      if( sw == 1 ){   //sw = pasada por distancia
-        lv_roller_get_selected_str( ui_rollerPasadaDistancia, text, sizeof(text) );
-        lv_label_set_text( ui_lblDistanceNumber, text ); 
-        espacio = atof( text );
-        tiempoHour = tiempoMin = tiempoSec = 0;
-        lv_label_set_text( ui_lblTimeNumber, "00:00:00" );         
-      }
-      if( sw == 0 ){   //sw = pasada por tiempo
-        espacio = 0;
-        lv_label_set_text( ui_lblDistanceNumber, "0" );
-        lv_roller_get_selected_str( ui_rollerPasadaTiempoMin, text, sizeof(text) );
-        tiempoMin = atoi( text );
-        lv_roller_get_selected_str( ui_rollerPasadaTiempoSeg, text, sizeof(text) ); 
-        tiempoSec = atoi( text );   
-        snprintf(text, sizeof(text), "%02i:%02i", tiempoMin, tiempoSec);
-        lv_label_set_text( ui_lblTimeNumber, text );  
-      }
-  }
-  lv_label_set_text(ui_lblSpeedNumber, "0"); 
-  lv_img_set_angle(ui_imgCursorSpeed, 0);
-  lv_label_set_text(ui_LabelVarRitm, "00'00\"");
-
-  smartdisplay_led_set_rgb( 0x00, 0x00, 0x00 );   //APAGADO   
-  pausaMacro = pausaMicro = 0;       
-  lv_obj_add_flag(ui_groupPausa, LV_OBJ_FLAG_HIDDEN); //OCULTA CARTEL DE PAUSA
-  lv_obj_add_flag(ui_groupReinitbtn, LV_OBJ_FLAG_HIDDEN);    //OCULTA EL BTN DE REINICIO
-  lv_obj_add_flag(ui_btnRealTime, LV_OBJ_FLAG_CLICKABLE);   //LIBRE YA ES CLICKABLE
-  lv_obj_add_flag(ui_btnInter, LV_OBJ_FLAG_CLICKABLE); //PROGRAMADO YA ES CLICKABLE
-}
-
-size_t conectWifi = 0;
-void conect_wifi ( lv_event_t * e){  
-  tone( beep, 1000, 50 );
-  tone( beep, 1300, 50 );
-  conectWifi = 1;
-}
-
-size_t desconectWifi = 0;
-void disconect_wifi ( lv_event_t * e){
-  tone( beep, 1300, 50 );
-  tone( beep, 1000, 50 );
-  desconectWifi = 1; 
-}
-
-//OBTIENE HORA Y FECHA PARA IMPRIMIR EN PANTALLA
-//LOCAL TIME PREVIAMENTE SINCRONIZADA POR WIFI
-void printLocalTime( ) 
+//TAREAS
+void guiTask(void *pv)
 {
-  struct tm datetime;
-  char date[30], time[10];
-  if( habLocalTime == 1 ){
-    if (getLocalTime(&datetime)) {    
-    sprintf( date,"%02d/%02d/%4d", datetime.tm_mday, datetime.tm_mon+1, datetime.tm_year+1900 );
-    sprintf( time,"%02d:%02d", datetime.tm_hour, datetime.tm_min);
-    lv_label_set_text(ui_lblTime, time);
-    lv_label_set_text(ui_lblDate, date);    
-    }
-    //else Serial.println("Sin conexion a internet");
+  for(;;){
+    // Devuelve ms hasta el próximo timer que LVGL necesita atender
+    uint32_t wait_ms = lv_timer_handler();
+
+    // Clamp para que nunca se vaya al pasto (evita backlog gigante)
+    if(wait_ms > 20) wait_ms = 20;   // 20ms (~50 Hz)
+    if(wait_ms < 1)  wait_ms = 1;
+
+    vTaskDelay(pdMS_TO_TICKS(wait_ms));
   }
 }
 
-size_t tiempoMinPausa, tiempoSecPausa;
-void math()
-{    
-  char text[20];
-  const size_t tiempoVelMin = 2;   //tiempo maximo de espera para frenar el conteo de velocidad en segundos
-  //const int peso = 70;    //peso del usuario
-  const size_t v_max = 40;   //Velocidad maxima que se puede alcanzar 
-  float velocidad = 0;
-  float ritmo = 0;
-  
-  if( counterFlags > tiempoVelMin){
-    //flagSensor = 0;
-    lv_obj_clear_flag(ui_Group_Header_Up, LV_OBJ_FLAG_HIDDEN);   
-    lv_obj_clear_flag(ui_Group_Settings_Down, LV_OBJ_FLAG_HIDDEN); 
-    habLocalTime = 1;   
+void logTask(void *){
+  for(;;){
+    Serial.printf("[gui] worstGap=%lu ms lv=%lu us stackHW=%lu words\n",
+      (unsigned long)g_gui_worstGap_ms,
+      (unsigned long)g_gui_last_lv_us,
+      (unsigned long)g_gui_stack_hw
+    );
+    g_gui_worstGap_ms = 0;
+
+    /*Serial.printf("[flush] worst=%lu us last=%lu us\n",
+    (unsigned long)g_flush_worst_us, (unsigned long)g_flush_last_us);
+    g_flush_worst_us = 0;*/
+
+    Serial.printf("[flush] count/s=%lu worst=%lu us worstArea=%ldx%ld\n",
+    (unsigned long)g_flush_count,
+    (unsigned long)g_flush_worst_us,
+    (long)g_flush_worst_w, (long)g_flush_worst_h
+    );
+    g_flush_count = 0;
+    g_flush_worst_us = 0;
+
+    Serial.printf("[touch] count/s=%lu worst=%lu us last=%lu us\n",
+    (unsigned long)g_touch_count,
+    (unsigned long)g_touch_worst_us,
+    (unsigned long)g_touch_last_us
+    );
+    g_touch_count = 0;
+    g_touch_worst_us = 0;
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
-  else{    
-    lv_obj_add_flag(ui_Group_Header_Up, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_Group_Settings_Down, LV_OBJ_FLAG_HIDDEN);     
-    habLocalTime = 0;
-  }
- 
-  bool sw = lv_obj_has_state( ui_swTipoPasada, LV_STATE_CHECKED ); // switch de tipo de pasada
-  //Calculo de tiempo
-  if( ( habSensor == 1 && counterFlags <= tiempoVelMin ) || ( habSensor == 1 && habInter == 1 && fin != 1 ) ){    
-    
-    if(  habInter == 0 || (habInter == 1 && sw == 1 && pausaMicro == 0 && pausaMacro == 0 )  ){ //LIBRE o PASADA POR DISTANCIA INCREMENTA TIEMPO
-      Serial.printf("Pausa:  %02i:%02i ",tiempoMinPausa, tiempoSecPausa);
-      tiempoSec++;       
-      if( tiempoSec == 60  ){
-        tiempoSec = 0;
-        tiempoMin++;
-      }
-      if( tiempoMin == 60  ){
-        tiempoMin = 0;
-        tiempoHour++;
-      }
-      snprintf( text, sizeof( text ), "%02i:%02i:%02i", tiempoHour, tiempoMin, tiempoSec );
-      lv_label_set_text( ui_lblTimeNumber, text );
-    }
-
-    if( (pausaMicro == 2 || pausaMacro == 2) && habInter == 1 ){   //CONTEO DE TIEMPO PARA MODO MICRO Y MACRO PAUSA
-      if( pausaMicro == 2 ) Serial.printf("MICRO Pausa:  %02i:%02i ",tiempoMinPausa, tiempoSecPausa);
-      if( pausaMacro == 2 ) Serial.printf("MACRO Pausa:  %02i:%02i ",tiempoMinPausa, tiempoSecPausa);
-      if( tiempoSecPausa != 0 ) tiempoSecPausa--;
-      if( tiempoSecPausa == 0 ){
-        if( tiempoMinPausa == 0 ){
-          if( pausaMicro == 2 ){
-            tone( beep, 1000, 100 );
-            tone( beep, 800, 100 );
-            if( sw == 1 ){   //sw = pasada por distancia
-              lv_roller_get_selected_str( ui_rollerPasadaDistancia, text, sizeof(text) );
-              lv_label_set_text( ui_lblDistanceNumber, text ); 
-              espacio = atof( text );
-              tiempoHour = tiempoMin = tiempoSec = 0;
-                //snprintf(text, sizeof(text), "%02i:%02i:%02i", tiempoHour, tiempoMin, tiempoSec);
-              lv_label_set_text( ui_lblTimeNumber, "00:00:00" );  
-            
-            }
-            if( sw == 0 ){   //sw = pasada por tiempo
-              espacio = 0;
-              lv_label_set_text( ui_lblDistanceNumber, "0" );
-              lv_roller_get_selected_str( ui_rollerPasadaTiempoMin, text, sizeof(text) );
-              tiempoMin = atoi( text );
-              lv_roller_get_selected_str( ui_rollerPasadaTiempoSeg, text, sizeof(text) ); 
-              tiempoSec = atoi( text );   
-              snprintf(text, sizeof(text), "%02i:%02i", tiempoMin, tiempoSec);
-              lv_label_set_text( ui_lblTimeNumber, text );  
-            }            
-            pausaMicro = 3;
-          }
-          if( pausaMacro == 2 ){
-            lv_roller_get_selected_str( ui_rollerNumPasadas, text, sizeof(text));
-            numPasadasMath = atoi(text);
-            lv_label_set_text( ui_lblNumPasadas, text );
-            if( sw == 1 ){   //sw = pasada por distancia
-              lv_roller_get_selected_str( ui_rollerPasadaDistancia, text, sizeof(text) );
-              lv_label_set_text( ui_lblDistanceNumber, text ); 
-              espacio = atof( text );
-              tiempoHour = tiempoMin = tiempoSec = 0;
-                //snprintf(text, sizeof(text), "%02i:%02i:%02i", tiempoHour, tiempoMin, tiempoSec);
-              lv_label_set_text( ui_lblTimeNumber, "00:00:00" );  
-            
-            }
-            if( sw == 0 ){   //sw = pasada por tiempo
-              espacio = 0;
-              lv_label_set_text( ui_lblDistanceNumber, "0" );
-              lv_roller_get_selected_str( ui_rollerPasadaTiempoMin, text, sizeof(text) );
-              tiempoMin = atoi( text );
-              lv_roller_get_selected_str( ui_rollerPasadaTiempoSeg, text, sizeof(text) ); 
-              tiempoSec = atoi( text );   
-              snprintf(text, sizeof(text), "%02i:%02i", tiempoMin, tiempoSec);
-              lv_label_set_text( ui_lblTimeNumber, text );  
-            }             
-            tone( beep, 1200, 100 );
-            tone( beep, 1000, 100 );
-            tone( beep, 800, 100 );
-            pausaMacro = 3;
-          }  
-        }
-        else{
-          tiempoSecPausa = 59;
-          tiempoMinPausa--;
-        }        
-      }
-      snprintf( text, sizeof( text ), "%02i:%02i", tiempoMinPausa, tiempoSecPausa );
-      lv_label_set_text( ui_lblPausa, text );       
-    }
-
-    if( habInter == 1 && sw == 0 && fin != 1 && pausaMicro != 2 && pausaMacro != 2 ){ //INTEVALADO PASADA POR TIEMPO Y PAUSAS       
-      if( tiempoSec != 0 ) tiempoSec--;       
-      if( tiempoSec == 0 ){        
-        if( tiempoMin == 0 ){ //comienzan las pausas y se descuentan series y pasadas 
-          if( pausaMacro == 0 && pausaMicro == 0 ){
-            if( numPasadasMath > 1 ){     //entra a micropausa
-              numPasadasMath--;               
-              snprintf( text, sizeof(text), "%i", numPasadasMath );
-              lv_label_set_text( ui_lblNumPasadas, text );   //label de pasadas
-              lv_roller_get_selected_str( ui_rollerMicropausaMin, text, sizeof(text) );
-              tiempoMinPausa = atoi( text );      //label de minutos     
-              lv_roller_get_selected_str( ui_rollerMicropausaSeg, text, sizeof(text) ); 
-              tiempoSecPausa = atoi( text );      //label de segundos 
-              snprintf( text, sizeof( text ), "%02i:%02i", tiempoMinPausa, tiempoSecPausa );
-              lv_label_set_text( ui_lblPausa, text );                              
-              pausaMicro = 1;            
-            } 
-            else{
-              numPasadasMath--;               
-              snprintf( text, sizeof(text), "%i", numPasadasMath );
-              lv_label_set_text( ui_lblNumPasadas, text );   //label de pasadas              
-              if( numSeriesMath > 1 )   //entra a macropausa
-              {                
-                numSeriesMath--;               
-                snprintf( text, sizeof(text), "%i", numSeriesMath );
-                lv_label_set_text( ui_lblNumSeries, text );   //label de pasadas
-                lv_roller_get_selected_str( ui_rollerMacropausa, text, sizeof(text) );                tiempoMinPausa = atoi( text );      //label de minutos                     
-                tiempoMinPausa = atoi( text );      //label de segundos  
-                tiempoSecPausa = 0;
-                snprintf( text, sizeof( text ), "%02i:%02i", tiempoMinPausa, tiempoSecPausa );
-                lv_label_set_text( ui_lblPausa, text );                 
-                pausaMacro = 1;                 
-              }
-              else{     //termina el entrenamiento 
-                numSeriesMath--;               
-                snprintf( text, sizeof(text), "%i", numSeriesMath );
-                lv_label_set_text( ui_lblNumSeries, text );   //label de pasadas                                             
-                tone( beep, 1000, 100 );
-                tone( beep, 1100, 100 );
-                tone( beep, 1200, 100 );
-                tone( beep, 1300, 100 );
-                fin = 1;          
-              } //fin del entrenamiento            
-            } 
-          }                  
-        }
-        else{
-          tiempoSec = 59;
-          tiempoMin--;
-        }        
-      }                           
-      snprintf( text, sizeof( text ), "%02i:%02i", tiempoMin, tiempoSec );
-      lv_label_set_text( ui_lblTimeNumber, text );                 
-    }  
-  }
-
-  //VELOCIAD y RITMO INSTANTANEO Y ESPACIO
-  if( giro > giro_old )  {
-    counterFlags = 0;
-
-    //Tiempo instantaneo
-    if( tflag2 != 0 && tflag1 != 0 ){
-      tflags = ( tflag2 - tflag1 ) * 0.001;
-      tflag2 = tflag1 = 0;      
-      flagSensor = 0; //reinicia muestreo de velocidad instantanea
-    }
-    Serial.printf("T flag 1: %lu mseg\n", tflag1);
-    Serial.printf("T flag 2: %lu mseg\n", tflag2);    
-    Serial.printf("Tiempo entre flancos: %.1f mseg\n", tflags);   
-    
-    //Velocidad instantanea
-    if( tflags > 0){   
-      velocidad = ( drdisco / tflags ) * 3.6;   //calcula velocidad instantanea, resultado km por hora 
-      tflags = 0;
-      if( velocidad < 0.1 ) velocidad = 0;           
-      if( velocidad > v_max ){
-        if( velocidad - velocidad_old < 5 ) velocidad = v_max; //limitador de velocidad
-        else velocidad = velocidad_old;        
-      }   
-      velocidad_old = velocidad;     
-      //mueve el cursor de velocidad
-      size_t y = velocidad*45;
-      lv_img_set_angle(ui_imgCursorSpeed, y);
-       //FORMATEA E IMPRIME VELOCIDAD
-      snprintf(text, sizeof(text), "%.1f", velocidad); 
-      lv_label_set_text(ui_lblSpeedNumber, text); 
-      Serial.printf("Velocidad = %.1f km/h\n", velocidad);
-    }
-    
-    //Ritmo instantaneo
-    if( velocidad > 0 ){
-      ritmo = 60 / velocidad;   // ritmo en min/km   
-      if( ritmo > 30 ) ritmo = 30;
-      if( rgb ){
-        if( ritmo > 0 && ritmo <= 4 )
-          smartdisplay_led_set_rgb(0x01, 0x00, 0x00);   //COLOR ROJO
-        if( ritmo > 4 && ritmo <= 5 )
-          smartdisplay_led_set_rgb(0x01, 0x01, 0x00);   //COLOR AMARILLO
-        if( ritmo > 5 && ritmo <= 6 )
-          smartdisplay_led_set_rgb(0x0, 0x01, 0x00);   //COLOR VERDE
-        if( ritmo > 6 )
-          smartdisplay_led_set_rgb(0x01, 0x01, 0x01);   //COLOR BLANCO 
-      }
-      //FORMATEA E IMPRIME RITMO
-      int ritmoMin = ritmo;  
-      int ritmoSec = (ritmo - ritmoMin)*100;
-      ritmoSec = (ritmoSec * 60 ) /100;
-      snprintf(text, sizeof(text), "%02i'%02i\"", ritmoMin, ritmoSec);
-      lv_label_set_text(ui_LabelVarRitm, text);
-      Serial.printf("Ritmo = %.1f min/km\n", ritmo);  
-    } 
-
-    float pasadaDistance;
-      //pasada por distancia 
-    if( habInter == 1 && sw == 1 ){
-      pasadaDistance = espacio - ( drdisco * giro ); //calcula distancia para intervalado
-      if( pasadaDistance <= 0 ){
-          pasadaDistance = giro = 0;                
-          if( pausaMacro == 0 && pausaMicro == 0 ){
-            if( numPasadasMath > 1 ){
-              numPasadasMath--;               
-              snprintf( text, sizeof(text), "%i", numPasadasMath );
-              lv_label_set_text( ui_lblNumPasadas, text );   //label de pasadas
-              lv_roller_get_selected_str( ui_rollerMicropausaMin, text, sizeof(text) );
-              tiempoMinPausa = atoi( text );      //label de minutos     
-              lv_roller_get_selected_str( ui_rollerMicropausaSeg, text, sizeof(text) ); 
-              tiempoSecPausa = atoi( text );      //label de segundos 
-              snprintf( text, sizeof( text ), "%02i:%02i", tiempoMinPausa, tiempoSecPausa );
-              lv_label_set_text( ui_lblPausa, text );                              
-              pausaMicro = 1;            
-            } 
-            else{
-              numPasadasMath--;               
-              snprintf( text, sizeof(text), "%i", numPasadasMath );
-              lv_label_set_text( ui_lblNumPasadas, text );   //label de pasadas              
-              if( numSeriesMath > 1 )   //entra a macropausa
-              {                
-                numSeriesMath--;               
-                snprintf( text, sizeof(text), "%i", numSeriesMath );
-                lv_label_set_text( ui_lblNumSeries, text );   //label de pasadas
-                lv_roller_get_selected_str( ui_rollerMacropausa, text, sizeof(text) );                tiempoMinPausa = atoi( text );      //label de minutos                     
-                tiempoMinPausa = atoi( text );      //label de segundos  
-                tiempoSecPausa = 0;
-                snprintf( text, sizeof( text ), "%02i:%02i", tiempoMinPausa, tiempoSecPausa );
-                lv_label_set_text( ui_lblPausa, text );                 
-                pausaMacro = 1;                 
-              }
-              else{     //termina el entrenamiento 
-                numSeriesMath--;               
-                snprintf( text, sizeof(text), "%i", numSeriesMath );
-                lv_label_set_text( ui_lblNumSeries, text );   //label de pasadas                                             
-                tone( beep, 1000, 100 );
-                tone( beep, 1100, 100 );
-                tone( beep, 1200, 100 );
-                tone( beep, 1300, 100 );
-                fin = 1;          
-              } //fin del entrenamiento           
-            } 
-          }
-      }
-      snprintf(text, sizeof(text), "%.0f", pasadaDistance);      
-    }
-    if( habInter == 0 || (habInter == 1 && sw == 0) ){    //si LIBRE o PROGRAMADO POR TIEMPO
-      espacio = drdisco * giro;     //espacio total recorrido LIBRE
-      if( espacio <= 999 ){
-        snprintf(text, sizeof(text), "%.0f", espacio);
-        lv_label_set_text(ui_lblDistanceUnit, "mt");
-      } 
-      else{
-        espacio = espacio * 0.001;
-        snprintf(text, sizeof(text), "%.3f", espacio);
-        lv_label_set_text(ui_lblDistanceUnit, "km");
-      }
-    }     
-    lv_label_set_text(ui_lblDistanceNumber, text); 
-    Serial.printf("Distancia = %.3f m\n", espacio);                                      
-  }
-  Serial.printf( "fin = %i\n", fin );
-  Serial.printf( "micropausa = %i\n", pausaMicro );
-  Serial.printf( "macropausa = %i\n", pausaMacro );
-  giro_old = giro;
-  counterFlags++; //cuenta las veces que se ejecuta calculo sin que suceda lectura del sensor para hacer velocidad 0
 }
 
-void reset_conteo(){
-  giro = habSensor = 0;
-  lv_obj_clear_flag(ui_Group_Header_Up, LV_OBJ_FLAG_HIDDEN);   
-  lv_obj_clear_flag(ui_Group_Settings_Down, LV_OBJ_FLAG_HIDDEN);  
-  habLocalTime = 1;   //HABILITA HORA Y FECHA DE INTERNET  
-}
-
-//TaskHandle_t Nucleo1;
 
 void setup()
-{
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
-  log_i("Board: %s", BOARD_NAME);
-  log_i("CPU: %s rev %d, CPU Freq: %d Mhz, %d core(s)", ESP.getChipModel(), ESP.getChipRevision(), getCpuFrequencyMhz(), ESP.getChipCores());
-  log_i("Free heap: %d bytes", ESP.getFreeHeap());
-  log_i("Free PSRAM: %d bytes", ESP.getPsramSize());
-  log_i("SDK version: %s", ESP.getSdkVersion());      
+{ 
+  app_init();
 
-  #ifdef ESP70C
-  //SETUP DIGITAL OUTPUTS RGB
-  pinMode(redOut, OUTPUT);
-  pinMode(greenOut, OUTPUT);
-  pinMode(blueOut, OUTPUT);
-  #endif
-  /*xTaskCreatePinnedToCore( audioTask, "audioplay", 5000, NULL, 2 | portPRIVILEGE_BIT, NULL, 0 );
-
-  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-  audio.setVolume(21); // 0...21*/
-
-  //INCIO DE DISPLAY SMART
-  #ifdef ESP70C  
-  gui_start(); 
-  #endif
-  #ifdef ESP35C
-  smartdisplay_init();
-  __attribute__((unused)) auto disp = lv_disp_get_default();
-  lv_disp_set_rotation(disp, LV_DISP_ROT_90);
-  ui_init();
-  #endif
-
-  if(autoConfig())
-  {
-    lv_label_set_text(ui_lblNetName, WiFi.SSID().c_str());
-    lv_obj_set_style_img_recolor(ui_imgWifi, lv_color_hex(0xFFBF00), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_img_recolor(ui_imgWifi2, lv_color_hex(0xFFBF00), LV_PART_MAIN | LV_STATE_DEFAULT);
-    //SINCRONIZAR HORA CON INTERNET 
-    configTime(UTC_OFFSET, UTC_OFFSET_DST, NTP_SERVER);   
-    habLocalTime = 1;   //HABILITA HORA Y FECHA DE INTERNET 
-    tempo3.attach(10, printLocalTime); //handler para mostrar fecha y hora de internet cada 1min 
-    printLocalTime();    
-  }  
-  else{
-    lv_obj_set_style_img_recolor(ui_imgWifi, lv_color_hex(0x525552), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_img_recolor(ui_imgWifi2, lv_color_hex(0x525552), LV_PART_MAIN | LV_STATE_DEFAULT);
-  }
+  //inicia sensores
+  hall_sensor_init(sensorHall);
+  //xTaskCreatePinnedToCore(logTask, "log", 4096, NULL, 1, NULL, 0);  //TAREA PARA PRUEBAS 
   
-  tempo2.attach(0.005, lv_handler);
-
-  //VERSION, NUMERO DE MAQUINA Y ODOMETRO    
-  lv_label_set_text(ui_lblFirmwareVersion, version);
-  lv_label_set_text(ui_lblNumMaquina, WiFi.macAddress().c_str());
-  //lv_label_set_text( ui_lblodoMaquina, version);
-  
-  /*if(!SPIFFS.begin(true)) Serial.println("An Error has occurred while mounting SPIFFS");    
-  else   Serial.println("mounting SPIFFS ok!");  */
-
-  //tono( 4 ); //sonido inicial 
-  tone(beep, 500, 50);
-  tone(beep, 600, 50);
-  tone(beep, 700, 50);
-
-  //CONFIGURACION DE LA ENTRADA DEL SENSOR DE VELOCIDAD
-  pinMode(sensorHall, INPUT_PULLUP);
-  attachInterrupt(sensorHall, sensor, RISING);  //HABILITA INTERRUPCION DE SENSOR DE VELOCIDAD  
 }
-
-/*void audioTask(void *parameter){
-  Serial.print("This Task runs on Core: ");
-  Serial.println(xPortGetCoreID());
-  while(true){
-      Serial.printf("Tarea1\n");
-      delay(5000);
-  }
-
-}*/
 
 void loop()
-{   
-    
-  if( giro == 1 && habSensor==0 ){
-    tempo4.attach(5, reset_conteo);       
-    lv_obj_add_flag(ui_Group_Header_Up, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_Group_Settings_Down, LV_OBJ_FLAG_HIDDEN);     
-    habSensor = 2;
-    habLocalTime = 0;   //DESHABILITA HORA Y FECHA DE INTERNET
+{
+  // --- Manejo robusto de interrupción por transición de pantalla ---
+  static bool lastCfg = false;
+
+  if(habConfig && !lastCfg) {
+    hall_sensor_enable(false, sensorHall);
   }
-
-  if( giro > 3 && habSensor==2 ){ 
-    giro=1;    
-    tempo4.detach();         
-    lv_obj_clear_flag(ui_groupReinitbtn, LV_OBJ_FLAG_HIDDEN);   //APARECE BOTON DE RESET DE ENTRENAMIENTO
-      lv_obj_clear_flag(ui_btnRealTime, LV_OBJ_FLAG_CLICKABLE); //LIBRE YA NO ES CLICKABLE, SOLO SE RESETEA DESDE BTN DE REINICIO EN ENTR. INTERVALADO
-      lv_obj_clear_flag(ui_btnInter, LV_OBJ_FLAG_CLICKABLE); //PROGRAMADO YA NO ES CLICKABLE, SOLO SE RESETEA DESDE BTN DE REINICIO EN ENTR. INTERVALADO
-    tempo1.attach(1, math);        
-    habSensor = 1;
-    tone( beep, 1000, 100 );
-    tone( beep, 2000, 100 );
-  }        
-
-  if(habConfig ==  1){         
-    tempo3.detach();
-    detachInterrupt(sensorHall);  //DESHABILITA INTERRUPCION DE SENSOR DE VELOCIDAD 
-    tone( beep, 800, 250 ); 
-    if(WiFi.status() == WL_CONNECTED){
-      initwebserver();      
-      lv_label_set_text(ui_lblNetworkIP, WiFi.localIP().toString().c_str() );    
-      char text[50];
-      snprintf(text, sizeof(text), "Conectado a la red %s", WiFi.SSID().c_str());
-      lv_label_set_text(ui_lblInfo, text );
-    }      
-    while(habConfig ==  1){    
-      if( desconectWifi == 1 ){   //btn desconectar WIFI
-        desconectWifi = 0;
-        tempo2.detach();
-        delay(10);
-        WiFi.disconnect(true,true);
-        tempo2.attach(0.005, lv_handler); 
-        lv_label_set_text(ui_lblNetName, "SIN RED");
-        lv_obj_set_style_img_recolor(ui_imgWifi, lv_color_hex(0x525552), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_img_recolor(ui_imgWifi2, lv_color_hex(0x525552), LV_PART_MAIN | LV_STATE_DEFAULT);  
-        lv_label_set_text(ui_lblInfo, "Desconectado");          
-        lv_label_set_text(ui_lblNetworkIP, "0.0.0.0" );
-      }      
-
-      if( habSearchNets == 1){   //habilita busqueda de redes apenas carga la ptll de configuracion          
-        habSearchNets = 0;
-        lv_label_set_text(ui_lblInfo, "Buscando redes");       
-        Serial.printf("Buscando redes\n"); 
-        int n = WiFi.scanNetworks();
-        Serial.printf("Redes disponibles: %i \n", n); 
-        if(n>0)lv_label_set_text(ui_lblInfo, "Redes disponibles");   
-        else lv_label_set_text(ui_lblInfo, "No hay redes disponibles");           
-        for (int i = 0; i < n; ++i)lv_dropdown_add_option(ui_Dropdown1, WiFi.SSID(i).c_str(), i );         
-      }   
-
-      if( conectWifi == 1 ){    //btn conectar WIFI
-        conectWifi = 0;
-        lv_label_set_text(ui_lblInfo, "Conectando");    
-        Serial.printf("%s\n", WiFi.SSID(lv_dropdown_get_selected(ui_Dropdown1)));  
-        Serial.printf("%s\n", lv_textarea_get_text(ui_passArea));                   
-        WiFi.disconnect(true,true);  
-        WiFi.begin( WiFi.SSID(lv_dropdown_get_selected(ui_Dropdown1)) , lv_textarea_get_text(ui_passArea) );
-        for (size_t i = 0; i < 5; i++)
-        {
-          if (WiFi.status() == WL_CONNECTED)
-          {         
-            char text[50];     
-            Serial.println("Connection successful!");
-            Serial.printf("SSID:%s\n", WiFi.SSID().c_str());
-            Serial.printf("PSW:%s\n", WiFi.psk().c_str());    
-            lv_label_set_text(ui_lblNetName, WiFi.SSID().c_str());
-            lv_obj_set_style_img_recolor(ui_imgWifi, lv_color_hex(0xFFBF00), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_img_recolor(ui_imgWifi2, lv_color_hex(0xFFBF00), LV_PART_MAIN | LV_STATE_DEFAULT);
-            //SINCRONIZAR HORA CON INTERNET
-            configTime(UTC_OFFSET, UTC_OFFSET_DST, NTP_SERVER);
-            printLocalTime();             
-            lv_label_set_text(ui_lblNetworkIP, WiFi.localIP().toString().c_str() );                
-            snprintf(text, sizeof(text), "Conectado a la red %s", WiFi.SSID().c_str());
-            lv_label_set_text(ui_lblInfo, text );           
-            i=6;                               
-          }
-          else
-          {
-            delay(2000);
-            Serial.println("Waiting for automatic network configuration to...");
-            Serial.printf("SSID:%s\n", WiFi.SSID().c_str());      
-            Serial.printf("PSW:%s\n", WiFi.psk().c_str());
-          }
-        } 
-        if(WiFi.status() == WL_CONNECTED){
-          delay(2000);
-          initwebserver(); 
-        } 
-        if(WiFi.status() == WL_DISCONNECTED){
-          lv_label_set_text(ui_lblInfo, "Sin conexion a Wifi");
-        } 
-      }        
-      if(WiFi.status() == WL_CONNECTED) handle_server();                
-
-    }
-    endwebserver();    
-    attachInterrupt(sensorHall, sensor, RISING);  //HABILITA INTERRUPCION DE SENSOR DE VELOCIDAD       
-    tempo3.attach(10, printLocalTime); //handler para mostrar fecha y hora de internet cada 1min
+  if(!habConfig && lastCfg) {
+    hall_sensor_enable(true, sensorHall);
   }
-
-
-  if( pausaMicro == 1 ){  //COMIENZO DE MICROPAUSA    
-    detachInterrupt( sensorHall );
-    tone( beep, 900, 150 );    
-    smartdisplay_led_set_rgb(0x01, 0x01, 0x00);   //COLOR AMARILLO 
-    lv_label_set_text(ui_lblTittlePausa, "PASADA EN PAUSA");
-    lv_obj_set_style_border_color(ui_groupPausa, lv_color_hex(0xF3B100), LV_PART_MAIN | LV_STATE_DEFAULT);         
-    lv_obj_set_style_text_color(ui_lblPausa, lv_color_hex(0xF3B100), LV_PART_MAIN | LV_STATE_DEFAULT);   //label de pausa color amarillo                       
-    lv_obj_clear_flag(ui_groupPausa, LV_OBJ_FLAG_HIDDEN);
-    pausaMicro = 2;
-  }
-
-  if( pausaMacro == 1 ){ //COMIENZO DE MACROPAUSA    
-    detachInterrupt( sensorHall );
-    tone( beep, 1000, 150 );
-    smartdisplay_led_set_rgb(0x01, 0x00, 0x00);   //COLOR ROJO
-    lv_label_set_text(ui_lblTittlePausa, "SERIE EN PAUSA");
-    lv_obj_set_style_border_color(ui_groupPausa, lv_color_hex(0xDE3C00), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(ui_lblPausa, lv_color_hex(0xDE3C00), LV_PART_MAIN | LV_STATE_DEFAULT);    
-    lv_obj_clear_flag(ui_groupPausa, LV_OBJ_FLAG_HIDDEN);        
-    pausaMacro = 2;
-  }
-
-  if( pausaMicro == 3 || pausaMacro == 3 ){ //FIN DE MICRO O MACROPAUSA    
-    lv_obj_add_flag(ui_groupPausa, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_set_style_text_color(ui_lblPausa, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);   
-    attachInterrupt(sensorHall, sensor, RISING);  //HABILITA INTERRUPCION DE SENSOR DE VELOCIDAD               
-    pausaMicro = pausaMacro = 0;
-  }
-
-  if( fin == 1 ) detachInterrupt( sensorHall );
-
-  if( fin == 2 ){
-    attachInterrupt(sensorHall, sensor, RISING);  //HABILITA INTERRUPCION DE SENSOR DE VELOCIDAD
-    fin = 0;
-  }  
-  
-  /*if(WiFi.status() == WL_CONNECTION_LOST){    
-    lv_obj_set_style_img_recolor(ui_imgWifi, lv_color_hex(0x525552), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_img_recolor(ui_imgWifi2, lv_color_hex(0x525552), LV_PART_MAIN | LV_STATE_DEFAULT);   
-    tempo3.detach(); 
-  }*/
+  lastCfg = habConfig;
+  wifi_mgr_loop();
+  //beep_update();
+  delay(5); // cede CPU, evita loop apretado
 }
+
 
 
 

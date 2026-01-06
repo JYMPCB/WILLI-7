@@ -89,7 +89,7 @@ public:
       auto cfg = _touch_instance.config();
       cfg.x_min      = 0;
       cfg.y_min      = 0;
-      cfg.bus_shared = false;
+      cfg.bus_shared = true;
       cfg.offset_rotation = 0;
       // I2C connection
       cfg.i2c_port   = I2C_NUM_0;
@@ -99,7 +99,7 @@ public:
       cfg.pin_rst    = GPIO_NUM_38;
       cfg.x_max      = 800;
       cfg.y_max      = 480;
-      cfg.freq       = 100000; //100000
+      cfg.freq       = 1000000; //100000
       _touch_instance.config(cfg);
       _panel_instance.setTouch(&_touch_instance);
     }

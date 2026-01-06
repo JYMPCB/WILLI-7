@@ -1,8 +1,0 @@
-#include <Arduino.h>
-#include "hardwareESP32.h"  //definicion de pines IO
-
-void smartdisplay_led_set_rgb( size_t redColour, size_t greenColour, size_t blueColour){
-    digitalWrite( redOut, redColour);
-    digitalWrite( greenOut, greenColour);
-    digitalWrite( blueOut, blueColour);
-}

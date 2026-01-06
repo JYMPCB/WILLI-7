@@ -1,2 +1,4 @@
-const char* version = "V3.8";
-bool rgb = 1;     //0 = sin RGB, 1 = con RGB
+#pragma once
+
+extern const char* g_fw_version;
+
