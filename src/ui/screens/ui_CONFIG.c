@@ -18,11 +18,11 @@ lv_obj_t * ui_lblMac = NULL;
 lv_obj_t * ui_lblOdoMaquina = NULL;
 lv_obj_t * ui_btnWifi = NULL;
 lv_obj_t * ui_lblInfo = NULL;
-lv_obj_t * ui_Keyboard1 = NULL;
 lv_obj_t * ui_lblNetName = NULL;
 lv_obj_t * ui_lblOtaNotes = NULL;
 lv_obj_t * ui_btnOtaUpdate = NULL;
 lv_obj_t * ui_btnOtaCheck = NULL;
+lv_obj_t * ui_Keyboard1 = NULL;
 lv_obj_t * ui_otaOverlay = NULL;
 lv_obj_t * ui_lblOtaStatus = NULL;
 lv_obj_t * ui_barOta = NULL;
@@ -65,15 +65,6 @@ void ui_event_btnWifi(lv_event_t * e)
     }
 }
 
-void ui_event_Keyboard1(lv_event_t * e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-
-    if(event_code == LV_EVENT_READY) {
-        _ui_flag_modify(ui_Keyboard1, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
-    }
-}
-
 void ui_event_btnOtaUpdate(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -93,6 +84,15 @@ void ui_event_btnOtaCheck(lv_event_t * e)
 
     if(event_code == LV_EVENT_CLICKED) {
         event_btn_check_ota(e);
+    }
+}
+
+void ui_event_Keyboard1(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_READY) {
+        _ui_flag_modify(ui_Keyboard1, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
     }
 }
 
@@ -249,12 +249,6 @@ void ui_CONFIG_screen_init(void)
     lv_obj_set_style_text_opa(ui_lblInfo, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_lblInfo, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_Keyboard1 = lv_keyboard_create(ui_CONFIG);
-    lv_obj_set_width(ui_Keyboard1, lv_pct(100));
-    lv_obj_set_height(ui_Keyboard1, lv_pct(60));
-    lv_obj_set_align(ui_Keyboard1, LV_ALIGN_BOTTOM_MID);
-    lv_obj_add_flag(ui_Keyboard1, LV_OBJ_FLAG_HIDDEN);     /// Flags
-
     ui_lblNetName = lv_label_create(ui_CONFIG);
     lv_obj_set_width(ui_lblNetName, lv_pct(21));
     lv_obj_set_height(ui_lblNetName, LV_SIZE_CONTENT);    /// 1
@@ -295,6 +289,12 @@ void ui_CONFIG_screen_init(void)
     lv_obj_set_align(ui_btnOtaCheck, LV_ALIGN_CENTER);
     lv_obj_set_style_bg_color(ui_btnOtaCheck, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_btnOtaCheck, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_Keyboard1 = lv_keyboard_create(ui_CONFIG);
+    lv_obj_set_width(ui_Keyboard1, lv_pct(100));
+    lv_obj_set_height(ui_Keyboard1, lv_pct(60));
+    lv_obj_set_align(ui_Keyboard1, LV_ALIGN_BOTTOM_MID);
+    lv_obj_add_flag(ui_Keyboard1, LV_OBJ_FLAG_HIDDEN);     /// Flags
 
     ui_otaOverlay = lv_obj_create(ui_CONFIG);
     lv_obj_set_width(ui_otaOverlay, lv_pct(100));
@@ -345,10 +345,10 @@ void ui_CONFIG_screen_init(void)
     lv_obj_add_event_cb(ui_btnConfig2, ui_event_btnConfig2, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_passArea, ui_event_passArea, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_btnWifi, ui_event_btnWifi, LV_EVENT_ALL, NULL);
-    lv_keyboard_set_textarea(ui_Keyboard1, ui_passArea);
-    lv_obj_add_event_cb(ui_Keyboard1, ui_event_Keyboard1, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_btnOtaUpdate, ui_event_btnOtaUpdate, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_btnOtaCheck, ui_event_btnOtaCheck, LV_EVENT_ALL, NULL);
+    lv_keyboard_set_textarea(ui_Keyboard1, ui_passArea);
+    lv_obj_add_event_cb(ui_Keyboard1, ui_event_Keyboard1, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_CONFIG, ui_event_CONFIG, LV_EVENT_ALL, NULL);
 
 }
@@ -371,11 +371,11 @@ void ui_CONFIG_screen_destroy(void)
     ui_lblOdoMaquina = NULL;
     ui_btnWifi = NULL;
     ui_lblInfo = NULL;
-    ui_Keyboard1 = NULL;
     ui_lblNetName = NULL;
     ui_lblOtaNotes = NULL;
     ui_btnOtaUpdate = NULL;
     ui_btnOtaCheck = NULL;
+    ui_Keyboard1 = NULL;
     ui_otaOverlay = NULL;
     ui_lblOtaStatus = NULL;
     ui_barOta = NULL;

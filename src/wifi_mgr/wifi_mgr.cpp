@@ -65,16 +65,13 @@ static void wifi_sync_globals_from_status()
 // Reconexión limitada fuera de config (no rompe scan)
 static void wifi_maintenance()
 {
-  if(WiFi.status() == WL_CONNECTED) {
+  wl_status_t st = WiFi.status();
+
+  if(st == WL_CONNECTED) {
     start_sntp_if_needed();
-    s_auto_done = true; // si ya conectó, no insistir más    
-    return;
-  }
-
-  if(s_auto_done) return;
-
-  if(s_auto_tries >= MAX_AUTO_TRIES) {
-    s_auto_done = true; // rendirse, que lo hagan manual si quieren
+    // si conectó, reseteo contadores por prolijidad
+    s_auto_tries = 0;
+    s_reconn_t0  = millis();
     return;
   }
 
@@ -84,8 +81,12 @@ static void wifi_maintenance()
 
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
-  WiFi.begin();   // intenta con la última red guardada
-  s_auto_tries++;
+
+  // Intento suave: usa credenciales guardadas por el stack
+  WiFi.reconnect();
+
+  // (opcional) solo para diagnóstico/telemetría
+  if(s_auto_tries < 250) s_auto_tries++;
 }
 
 // helpers
@@ -135,6 +136,7 @@ void wifi_mgr_on_enter_config()
 
 void wifi_mgr_on_exit_config()
 {
+  WiFi.setAutoReconnect(true);
   cfg_wifi_state = CFG_WIFI_IDLE;
 
   if(cfg_server_on) {
@@ -145,6 +147,17 @@ void wifi_mgr_on_exit_config()
 
 void wifi_mgr_loop()
 {
+  static uint32_t s_ota_next_ms = 0;
+  static const uint32_t OTA_FIRST_DELAY_MS = 8000;           // 8s post-conexión
+  static const uint32_t OTA_PERIOD_MS      = 5UL*60UL*1000UL;
+
+  static uint32_t t = 0;
+if(millis() - t > 1000) {
+  t = millis();
+  Serial.printf("[wifi] st=%d habConfig=%d tries=%u ssid='%s' ip='%s'\n",
+                (int)WiFi.status(), habConfig, (unsigned)s_auto_tries, cfg_ssid, cfg_ip);
+}
+
   static bool s_ota_checked_this_boot = false;
   // ✅ mantener globals coherentes siempre
   wifi_sync_globals_from_status();  
@@ -155,16 +168,21 @@ void wifi_mgr_loop()
   if (st == WL_CONNECTED && s_last_st != WL_CONNECTED) {
     rest_api_start();   // ✅ solo una vez al conectar/reconectar
 
-    // Chequear OTA una vez por boot (o por reconexión)
-    if (!s_ota_checked_this_boot && !g_ota_active) {
-      s_ota_checked_this_boot = true;
-      ota_check_async();
-    }    
+    // programar primer check OTA (no inmediato)
+    s_ota_next_ms = millis() + OTA_FIRST_DELAY_MS;   
   }
 
   // detectar desconexión
   if (st != WL_CONNECTED && s_last_st == WL_CONNECTED) {
     rest_api_stop();
+
+    // ✅ permitir reconexión automática otra vez
+    s_auto_done  = false;
+    s_auto_tries = 0;
+    s_reconn_t0  = 0;
+
+    // (opcional) permitir nuevo check OTA cuando reconecte
+    s_ota_checked_this_boot = false;
   }
 
   s_last_st = st;
@@ -189,6 +207,15 @@ void wifi_mgr_loop()
     }
   }
 
+  // ------------------- OTA auto-check (solo con WiFi conectado y estable) -------------------
+  if (st == WL_CONNECTED && !g_ota_active && s_ota_next_ms != 0) {
+    uint32_t now = millis();
+    if ((int32_t)(now - s_ota_next_ms) >= 0 && !g_ota_check_running) {
+      ota_check_async();
+      s_ota_next_ms = now + OTA_PERIOD_MS;   // cada 5 min
+    }
+  }
+
   // Si NO estás en config: mantenimiento + apagar OTA si estaba
   if(habConfig != 1) {
     wifi_maintenance();
@@ -208,21 +235,29 @@ void wifi_mgr_loop()
     // (wifi_ok/cfg_ssid/cfg_ip los fija wifi_sync... arriba)
   }
 
- // ------------------- START SCAN -------------------
+  // ------------------- START SCAN -------------------
   if(cfg_need_scan) {
     cfg_need_scan = false;
 
     cfg_wifi_state = CFG_WIFI_SCANNING;
     snprintf(cfg_info, sizeof(cfg_info), "Buscando redes...");
 
-    // NO desconectar si ya está conectado (si desconectás, rompés icono/IP/OTA)
     WiFi.mode(WIFI_STA);
 
-    // limpiar resultado anterior y arrancar scan async
-    WiFi.scanDelete();
-    delay(50); // opcional, cortito
+    // ✅ Si YA estoy conectado, NO desconectar (si no, se cae el icono/IP)
+    // ✅ Solo “limpiar” cuando estoy desconectado y el stack está intentando autenticarse
+    if (WiFi.status() != WL_CONNECTED) {
+      WiFi.setAutoReconnect(false);      // frena loops de reconexión durante el scan
+      WiFi.disconnect(false, false);     // no borrar credenciales
+      delay(50);
+    } else {
+      WiFi.setAutoReconnect(true);       // mantener conexión viva
+    }
 
-    WiFi.scanNetworks(true, true);  // async scan, show hidden = true
+    WiFi.scanDelete();
+    delay(50);
+
+    WiFi.scanNetworks(true, true);       // async scan
     scan_t0 = millis();
 
     cfg_scan_ready = false;
@@ -248,7 +283,9 @@ void wifi_mgr_loop()
       cfg_dd_opts_ready = true;
 
       WiFi.scanDelete();
+      WiFi.setAutoReconnect(true);
       cfg_wifi_state = CFG_WIFI_SCAN_DONE;
+      
     }
     else { // WIFI_SCAN_FAILED
       if(millis() - scan_t0 > SCAN_TIMEOUT_MS) {
@@ -260,6 +297,7 @@ void wifi_mgr_loop()
         cfg_dd_opts_ready = true;
 
         WiFi.scanDelete();
+        WiFi.setAutoReconnect(true);
         cfg_wifi_state = CFG_WIFI_FAIL;
       }
     }
