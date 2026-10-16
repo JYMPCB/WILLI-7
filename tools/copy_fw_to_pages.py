@@ -36,6 +36,11 @@ def after_build(source, target, env):
     fw_ver = fw_ver_raw.strip().strip('\\"').strip('"')
     fw_build = int(str(fw_build_raw).strip().strip('"'))
 
+    # Canal A congelado en 4.0.0. Un build posterior no puede pisar el puente.
+    if fw_ver != "4.0.0":
+        print("[OTA] NO se publica. latest.json queda en 4.0.0. version compilada=", fw_ver)
+        return
+
     # IMPORTANTÍSIMO: poné tu URL real aquí
     base_url = "https://jympcb.github.io/WILLI-7/ota"
     manifest = {

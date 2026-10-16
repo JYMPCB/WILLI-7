@@ -146,7 +146,7 @@ static void ota_check_task(void* pv) {
     goto done;
   }
 
-  /* Canal A: 1.0.11 → 1.0.12. Sin MAC. latest.json nunca pasa de 1.0.12. */
+  /* Canal A: versiones viejas → 4.0.0. Sin MAC. latest.json nunca pasa de 4.0.0. */
   if (semver_cmp(ver, g_fw_version) > 0) {
     commit_offer(ver, bin, notes);
     goto done;
