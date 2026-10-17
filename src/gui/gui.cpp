@@ -49,13 +49,13 @@ static bool gt911_read(uint16_t *x, uint16_t *y)
         return false;
     }
     uint8_t status = Wire.read();
+    uint8_t id = Wire.read();
     uint8_t xl = Wire.read();
     uint8_t xh = Wire.read();
     uint8_t yl = Wire.read();
     uint8_t yh = Wire.read();
     (void)Wire.read();
-    (void)Wire.read();
-    (void)Wire.read();
+    (void)id;
     if ((status & 0x80) == 0) {
         return false;
     }
@@ -117,11 +117,18 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
     (void)indev_driver;
     uint16_t touchX = 0;
     uint16_t touchY = 0;
+    static bool was_down = false;
     data->state = LV_INDEV_STATE_REL;
     if (gt911_read(&touchX, &touchY)) {
         data->state = LV_INDEV_STATE_PR;
         data->point.x = touchX;
         data->point.y = touchY;
+        if (!was_down) {
+            Serial.printf("[gui] touch %u,%u\n", touchX, touchY);
+        }
+        was_down = true;
+    } else {
+        was_down = false;
     }
 }
 

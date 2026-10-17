@@ -1,6 +1,6 @@
 {
-  "version": "4.0.2",
-  "build": 20261017,
-  "bin_url": "https://jympcb.github.io/WILLI-7/ota/firmware.bin?b=20261017",
+  "version": "4.0.3",
+  "build": 20261018,
+  "bin_url": "https://jympcb.github.io/WILLI-7/ota/firmware.bin?b=20261018",
   "notes": "Update disponible"
 }

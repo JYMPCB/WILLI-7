@@ -30,9 +30,9 @@ def after_build(source, target, env):
     fw_ver = fw_ver_raw.strip().strip('\\"').strip('"')
     fw_build = int(str(fw_build_raw).strip().strip('"'))
 
-    # Canal A congelado en 4.0.2. Un build posterior no puede pisar el puente.
-    if fw_ver != "4.0.2":
-        print("[OTA] NO se publica. latest.json queda en 4.0.2. version compilada=", fw_ver)
+    # Canal A congelado en 4.0.3. Un build posterior no puede pisar el puente.
+    if fw_ver != "4.0.3":
+        print("[OTA] NO se publica. latest.json queda en 4.0.3. version compilada=", fw_ver)
         return
 
     shutil.copyfile(fw_src, fw_dst)
