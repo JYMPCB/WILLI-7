@@ -25,21 +25,20 @@ def after_build(source, target, env):
         print("[OTA] ERROR: firmware.bin no encontrado en:", fw_src)
         return
 
+    fw_ver_raw = _get_define(env, "FW_VERSION", '"0.0.0"')
+    fw_build_raw = _get_define(env, "FW_BUILD", str(int(datetime.datetime.now().strftime("%Y%m%d"))))
+    fw_ver = fw_ver_raw.strip().strip('\\"').strip('"')
+    fw_build = int(str(fw_build_raw).strip().strip('"'))
+
+    # Canal A congelado en 4.0.2. Un build posterior no puede pisar el puente.
+    if fw_ver != "4.0.2":
+        print("[OTA] NO se publica. latest.json queda en 4.0.2. version compilada=", fw_ver)
+        return
+
     shutil.copyfile(fw_src, fw_dst)
     print("[OTA] Copiado:", fw_src, "->", fw_dst)
 
     # ---- Generar latest.json ----
-    fw_ver_raw = _get_define(env, "FW_VERSION", '"0.0.0"')
-    fw_build_raw = _get_define(env, "FW_BUILD", str(int(datetime.datetime.now().strftime("%Y%m%d"))))
-
-    # FW_VERSION viene como \"1.0.2\" (con comillas escapadas)
-    fw_ver = fw_ver_raw.strip().strip('\\"').strip('"')
-    fw_build = int(str(fw_build_raw).strip().strip('"'))
-
-    # Canal A congelado en 4.0.0. Un build posterior no puede pisar el puente.
-    if fw_ver != "4.0.0":
-        print("[OTA] NO se publica. latest.json queda en 4.0.0. version compilada=", fw_ver)
-        return
 
     # IMPORTANTÍSIMO: poné tu URL real aquí
     base_url = "https://jympcb.github.io/WILLI-7/ota"
